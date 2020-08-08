@@ -1,93 +1,76 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 
-import emojiIcon from './assets/tag_faces.svg'
-
-import doubleCheck from './assets/done_all.svg'
-
-import micIcon from './assets/mic.svg'
+import { mainUser, contactsMessages, Message } from './generateFakeData'
+import Avatar from './components/Avatar'
+import ContactBox from './components/ContactBox'
+import MessageBox from './components/MessageBox'
+import ChatInputBox from './components/ChatInputBox'
+import Search from './components/Search'
+import Welcome from './components/Welcome'
 
 import './App.css'
 
 function App() {
+    const [data, setData] = useState(contactsMessages)
+    const [contactSelected, setContactSelected] = useState({})
+    const [currentMessages, setCurrentMessages] = useState([])
+    const [message, setMessage] = useState('')
+    const [search, setSearch] = useState('')
+    const [filteredContacts, setFilteredContact] = useState([])
+
+    useEffect(() => {
+        const currContact = data.find(d => d.contact.id == contactSelected.id)
+        setCurrentMessages(currContact && currContact.messages || [])
+        filterContacts(data, search)
+    }, [contactSelected, data, search])
+
+    function pushMessage() {
+        const index = data.findIndex(d => d.contact.id == contactSelected.id)
+        const newData = Object.assign([], data, {
+            [index]: {
+                contact: contactSelected,
+                messages: [...data[index].messages, new Message(true, message, new Date())]
+            }
+        })
+        setData(newData)
+        setMessage('')
+    }
+
+    function handleSearch(input) {
+        setSearch(input)
+        filterContacts(data, input)
+    }
+
+    function filterContacts(data, search) {
+        const result = data.filter(({ contact }) => {
+            return !search || contact.name.toLowerCase().includes(search.toLowerCase())
+        })
+        setFilteredContact(result)
+    }
+
     return (
         <div className="app">
             <aside>
                 <header>
-                    <div className="avatar-component">
-                        <img
-                            className="avatar"
-                            src="https://pbs.twimg.com/profile_images/501759258665299968/3799Ffxy.jpeg"
-                            alt=""
-                        />
-                    </div>
+                    <Avatar user={mainUser} />
                 </header>
-                <div className="search">
-                    <input type="text" placeholder="Search or start a new chat" />
-                </div>
+                <Search search={search} handleSearch={handleSearch}/>
                 <div className="contact-boxes">
-                    <div className="contact-box">
-                        <div className="avatar-component">
-                            <img
-                                className="avatar"
-                                src="https://pbs.twimg.com/profile_images/501759258665299968/3799Ffxy.jpeg"
-                                alt=""
-                            />
-                        </div>
-
-                        <div className="right-section">
-                            <div className="contact-box-header">
-                                <h3 className="avatar-title">Jessica</h3>
-                                <span className="time-mark">yesterday</span>
-                            </div>
-                            <div className="last-msg">
-                                <img src={doubleCheck} alt="" className="icon-small" />
-                                <span className="text">Lorem ipsum dolor</span>
-                            </div>
-                        </div>
-                    </div>
+                    {filteredContacts.map(({ contact, messages }) => {
+                        return <ContactBox contact={contact} key={contact.id} setContactSelected={setContactSelected} messages={messages}/>
+                    })}
                 </div>
             </aside>
-            <main>
-                <header>
-                    <div className="avatar-component">
-                        <img
-                            className="avatar"
-                            src="https://pbs.twimg.com/profile_images/501759258665299968/3799Ffxy.jpeg"
-                            alt=""
-                        />
-
-                        <h3 className="avatar-title">Sofia</h3>
-                    </div>
-                </header>
-                <div className="chats">
-                    <div className="message received">
-                        Lorem ipsum dolor sit amet consectetur, adipisicing elit. Consequatur voluptatibus fuga illo.
-                        <div className="metadata">
-                            <span className="date">05/20/2020</span>
-                        </div>
-                    </div>
-                    <div className="message sent">
-                        Lorem ipsum dolor, sit amet consectetur adipisicing.
-                        <div className="metadata">
-                            <span className="date">05/20/2020</span>
-                            <img src={doubleCheck} alt="" className="icon-small" />
-                        </div>
-                    </div>
-                </div>
-                <div className="chat-input-box">
-                    <div className="icon emoji-selector">
-                        <img src={emojiIcon} alt="" />
-                    </div>
-
-                    <div className="chat-input">
-                        <input type="text" placeholder="Type a message" />
-                    </div>
-
-                    <div className="icon send">
-                        <img src={micIcon} alt="" />
-                    </div>
-                </div>
-            </main>
+            {contactSelected.id
+            ?   (<main>
+                    <header>
+                        <Avatar user={contactSelected} showName/>
+                    </header>
+                    <MessageBox messages={currentMessages} />
+                    <ChatInputBox message={message} setMessage={setMessage} pushMessage={pushMessage}/>
+                </main>)
+            : <Welcome />
+            }
         </div>
     )
 }
